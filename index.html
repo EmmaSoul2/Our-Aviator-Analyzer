@@ -1,0 +1,140 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SkyWatch Analyzer</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1220;color:#edf4ff;font-family:Arial,sans-serif;padding:18px}
+main{max-width:600px;margin:auto}
+h1{color:#54a8ff}
+.card{background:#172337;border:1px solid #30415a;border-radius:14px;padding:16px;margin:14px 0}
+input,button{padding:13px;border-radius:9px;border:0;font-size:16px}
+input{width:100%;background:#0b1423;color:white;border:1px solid #40516a;margin:8px 0}
+button{background:#4ea1ff;color:#071321;font-weight:bold;margin:5px 2px}
+.secondary{background:#34465f;color:white}
+.danger{background:#71313b;color:white}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:#0d1726;padding:12px;border-radius:10px;text-align:center}
+.stat strong{display:block;font-size:23px;margin-top:7px}
+small,.note{color:#9eafc5;line-height:1.5}
+#history{display:flex;flex-wrap:wrap;gap:7px}
+.chip{background:#0d1726;padding:8px;border-radius:8px}
+.good{color:#43dda3}.bad{color:#ff8290}
+</style>
+</head>
+<body>
+<main>
+<h1>✦ SKYWATCH</h1>
+<p class="note">Aviator Multiplier History Analyzer</p>
+
+<div class="card">
+<h3>Record New Round</h3>
+<input id="value" type="number" min="1" step="0.01"
+placeholder="Enter multiplier e.g. 2.45">
+<button onclick="addRound()">ADD ROUND</button>
+</div>
+
+<div class="card">
+<h3>Statistics</h3>
+<div class="stats">
+<div class="stat"><small>Total</small><strong id="total">0</strong></div>
+<div class="stat"><small>2× or above</small><strong class="good" id="above">0</strong></div>
+<div class="stat"><small>Below 2×</small><strong class="bad" id="below">0</strong></div>
+</div>
+<h3>Observed 2×+ rate: <span id="rate">0%</span></h3>
+<p class="note">These are historical sample statistics, not predictions.</p>
+</div>
+
+<div class="card">
+<h3>Recent Results</h3>
+<div id="history">No rounds recorded.</div>
+<button class="secondary" onclick="exportData()">EXPORT CSV</button>
+<button class="danger" onclick="clearData()">CLEAR HISTORY</button>
+</div>
+
+<div class="card">
+<h3>Important Information</h3>
+<p class="note">
+SkyWatch records results and calculates historical frequencies.
+It cannot know or guarantee the next Aviator multiplier.
+No hidden game data is accessed and no bets are placed.
+Your recorded history is stored locally on this device.
+</p>
+</div>
+</main>
+
+<script>
+let rounds=[];
+try{
+rounds=JSON.parse(localStorage.getItem("skywatch_rounds")||"[]");
+if(!Array.isArray(rounds))rounds=[];
+}catch(e){rounds=[];}
+
+function save(){
+localStorage.setItem("skywatch_rounds",JSON.stringify(rounds));
+}
+
+function addRound(){
+let field=document.getElementById("value");
+let number=Number(field.value);
+if(!Number.isFinite(number)||number<1){
+alert("Enter a valid multiplier of 1 or higher.");
+return;
+}
+rounds.unshift({value:number,time:new Date().toISOString()});
+save();
+field.value="";
+render();
+}
+
+function render(){
+let total=rounds.length;
+let above=rounds.filter(r=>r.value>=2).length;
+let below=total-above;
+document.getElementById("total").textContent=total;
+document.getElementById("above").textContent=above;
+document.getElementById("below").textContent=below;
+document.getElementById("rate").textContent=
+(total?(above/total*100).toFixed(1):"0")+"%";
+
+let history=document.getElementById("history");
+history.innerHTML="";
+if(!total){
+history.textContent="No rounds recorded.";
+return;
+}
+rounds.slice(0,100).forEach(r=>{
+let chip=document.createElement("span");
+chip.className="chip "+(r.value>=2?"good":"bad");
+chip.textContent=r.value.toFixed(2)+"×";
+history.appendChild(chip);
+});
+}
+
+function exportData(){
+let csv="Multiplier,Date\n"+rounds.map(r=>
+r.value+","+r.time).join("\n");
+let blob=new Blob([csv],{type:"text/csv"});
+let url=URL.createObjectURL(blob);
+let a=document.createElement("a");
+a.href=url;
+a.download="skywatch-history.csv";
+a.click();
+URL.revokeObjectURL(url);
+}
+
+function clearData(){
+if(confirm("Delete all recorded rounds?")){
+rounds=[];
+save();
+render();
+}
+}
+
+render();
+</script>
+</body>
+</html>
